@@ -1,0 +1,387 @@
+diff -r sudo_vulnerable/ChangeLog sudo_fixed/ChangeLog
+0a1,135
+> 2021-01-23  Todd C. Miller  <Todd.Miller@sudo.ws>
+> 
+> 	* .hgtags:
+> 	Added tag SUDO_1_9_5p2 for changeset 83685ffbc4df
+> 	[74a2ddc3e4a4] [tip] <1.9>
+> 
+> 	* Merge sudo 1.9.5p2 from tip
+> 	[83685ffbc4df] [SUDO_1_9_5p2] <1.9>
+> 
+> 	* plugins/sudoers/timestamp.c:
+> 	Fix the memset offset when converting a v1 timestamp to TS_LOCKEXCL.
+> 	We want to zero the struct starting at flags, not type (which was
+> 	just set). Found by Qualys.
+> 	[09f98816fc89]
+> 
+> 	* src/parse_args.c:
+> 	Don't assume that argv is allocated as a single flat buffer. While
+> 	this is how the kernel behaves it is not a portable assumption. The
+> 	assumption may also be violated if getopt_long(3) permutes
+> 	arguments. Found by Qualys.
+> 	[c125fbe68783]
+> 
+> 	* NEWS, configure, configure.ac:
+> 	Sudo 1.9.5p2
+> 	[89a357d8da4e]
+> 
+> 	* src/parse_args.c:
+> 	Reset valid_flags to MODE_NONINTERACTIVE for sudoedit. This is
+> 	consistent with how the -e option is handled. Also reject -H and -P
+> 	flags for sudoedit as was done in sudo 1.7. Found by Qualys, this is
+> 	part of the fix for CVE-2021-3156.
+> 	[9b97f1787804]
+> 
+> 	* plugins/sudoers/policy.c:
+> 	Add sudoedit flag checks in plugin that are consistent with front-
+> 	end. Don't assume the sudo front-end is sending reasonable mode
+> 	flags. These checks need to be kept consistent between the sudo
+> 	front-end and the sudoers plugin.
+> 	[a97dc92eae6b]
+> 
+> 	* plugins/sudoers/sudoers.c:
+> 	Fix potential buffer overflow when unescaping backslashes in
+> 	user_args. Also, do not try to unescaping backslashes unless in run
+> 	mode *and* we are running the command via a shell. Found by Qualys,
+> 	this fixes CVE-2021-3156.
+> 	[049ad90590be]
+> 
+> 2021-01-22  Fabrice Fontaine  <fontaine.fabrice@gmail.com>
+> 
+> 	* lib/eventlog/Makefile.in:
+> 	lib/eventlog/Makefile.in: fix static build without closefrom
+> 
+> 	Since version 1.9.4 and https://github.com/sudo-
+> 	project/sudo/commit/bd1ca79cca827a92e904f022e49df121931d4ff5, when
+> 	closefrom is not available, libsudo_eventlog.a depends on
+> 	libsudo_util.a. So reflect this dependency in the libtool file to
+> 	avoid the following static build failure of logsrvd:
+> 
+> 	/bin/bash ../libtool --tag=disable-static --mode=link
+> 	/home/buildroot/autobuild/instance-1/output-1/host/bin/powerpc-
+> 	linux-gcc -o sudo_logsrvd logsrv_util.o iolog_writer.o logsrvd.o
+> 	logsrvd_conf.o -static -Wl,--enable-new-dtags -Wl,-z,relro
+> 	../lib/iolog/libsudo_iolog.la ../lib/eventlog/libsudo_eventlog.la
+> 	../lib/logsrv/liblogsrv.la /bin/bash ../libtool --tag=disable-static
+> 	--mode=link
+> 	/home/buildroot/autobuild/instance-1/output-1/host/bin/powerpc-
+> 	linux-gcc -o sudo_sendlog logsrv_util.o sendlog.o -static -Wl,--
+> 	enable-new-dtags -Wl,-z,relro ../lib/iolog/libsudo_iolog.la
+> 	../lib/eventlog/libsudo_eventlog.la ../lib/logsrv/liblogsrv.la
+> 	libtool: link:
+> 	/home/buildroot/autobuild/instance-1/output-1/host/bin/powerpc-
+> 	linux-gcc -o sudo_logsrvd logsrv_util.o iolog_writer.o logsrvd.o
+> 	logsrvd_conf.o -static -Wl,--enable-new-dtags -Wl,-z -Wl,relro
+> 	../lib/iolog/.libs/libsudo_iolog.a /home/buildroot/autobuild/instanc
+> 	e-1/output-1/build/sudo-1.9.5p1/lib/util/.libs/libsudo_util.a
+> 	-lpthread -lz ../lib/eventlog/.libs/libsudo_eventlog.a
+> 	../lib/logsrv/.libs/liblogsrv.a
+> 	/home/buildroot/autobuild/instance-1/output-1/host/opt/ext-
+> 	toolchain/bin/../lib/gcc/powerpc-buildroot-linux-
+> 	uclibc/8.3.0/../../../../powerpc-buildroot-linux-uclibc/bin/ld:
+> 	../lib/eventlog/.libs/libsudo_eventlog.a(eventlog.o): in function
+> 	`send_mail.constprop.1': eventlog.c:(.text+0x149c): undefined
+> 	reference to `sudo_closefrom' collect2: error: ld returned 1 exit
+> 	status
+> 
+> 	Fixes:
+> 	 - http://autobuild.buildroot.org/results/515b45f876fa9de03c9235f86017f
+> 	4dc10eb3b54
+> 
+> 	Signed-off-by: Fabrice Fontaine <fontaine.fabrice@gmail.com>
+> 	[4e42d276c336]
+> 
+> 2021-01-21  Todd C. Miller  <Todd.Miller@sudo.ws>
+> 
+> 	* plugins/sudoers/log_client.c:
+> 	Do not add an unfinished write buffer to the queue if it is already
+> 	present. In client_msg_cb() we only remove a buffer from the queue
+> 	when it is finished. Inserting the buf again can cause a cycle in
+> 	the queue.
+> 	[b398dcc0933d]
+> 
+> 2021-01-20  Todd C. Miller  <Todd.Miller@sudo.ws>
+> 
+> 	* plugins/sudoers/log_client.c:
+> 	Fix problem when SSL_read() returns SSL_ERROR_WANT_WRITE. This can
+> 	happen when the socket cannot be written to immediately. We need to
+> 	set the read_instead_of_write flag in that case, _not_
+> 	write_instead_of_read. Also sync comments with sendlog.c. Bug #954
+> 	[e4239bb932aa]
+> 
+> 2021-01-18  Pavel Březina  <pbrezina@redhat.com>
+> 
+> 	* plugins/sudoers/auth/pam.c:
+> 	pam: pass KRB5CCNAME to pam_authenticate environment if available
+> 
+> 	If a PAM module wants to authenticate user using GSSAPI, the
+> 	authentication is broken if non-default ccache name is used in
+> 	KRB5CCNAME environment variable.
+> 
+> 	One way to mitigate this would be to add this to env_keep, but this
+> 	also makes the variable available in the executed command which may
+> 	not be always desirable.
+> 
+> 	This patch sets KRB5CCNAME for pam_authenticate only, if it is
+> 	available and not yet set.
+> 	[90aba6ba6e03]
+> 
+> 2021-01-15  Todd C. Miller  <Todd.Miller@sudo.ws>
+> 
+> 	* lib/util/progname.c:
+> 	Fix setprogname() emulation on systems without it. For fully-
+> 	qualified paths, store the string starting after the last slash, not
+> 	at the slash itself.
+> 	[111fde52d116]
+> 
+5c140
+< 	[e837c76279bc] [tip] <1.9>
+---
+> 	[e837c76279bc] <1.9>
+diff -r sudo_vulnerable/configure sudo_fixed/configure
+3c3
+< # Generated by GNU Autoconf 2.69 for sudo 1.9.5p1.
+---
+> # Generated by GNU Autoconf 2.69 for sudo 1.9.5p2.
+593,594c593,594
+< PACKAGE_VERSION='1.9.5p1'
+< PACKAGE_STRING='sudo 1.9.5p1'
+---
+> PACKAGE_VERSION='1.9.5p2'
+> PACKAGE_STRING='sudo 1.9.5p2'
+1587c1587
+< \`configure' configures sudo 1.9.5p1 to adapt to many kinds of systems.
+---
+> \`configure' configures sudo 1.9.5p2 to adapt to many kinds of systems.
+1653c1653
+<      short | recursive ) echo "Configuration of sudo 1.9.5p1:";;
+---
+>      short | recursive ) echo "Configuration of sudo 1.9.5p2:";;
+1927c1927
+< sudo configure 1.9.5p1
+---
+> sudo configure 1.9.5p2
+2636c2636
+< It was created by sudo $as_me 1.9.5p1, which was
+---
+> It was created by sudo $as_me 1.9.5p2, which was
+28819c28819
+< This file was extended by sudo $as_me 1.9.5p1, which was
+---
+> This file was extended by sudo $as_me 1.9.5p2, which was
+28885c28885
+< sudo config.status 1.9.5p1
+---
+> sudo config.status 1.9.5p2
+diff -r sudo_vulnerable/configure.ac sudo_fixed/configure.ac
+21c21
+< AC_INIT([sudo], [1.9.5p1], [https://bugzilla.sudo.ws/], [sudo])
+---
+> AC_INIT([sudo], [1.9.5p2], [https://bugzilla.sudo.ws/], [sudo])
+diff -r sudo_vulnerable/lib/eventlog/Makefile.in sudo_fixed/lib/eventlog/Makefile.in
+49,50c49,51
+< # Libraries for test programs
+< LIBS = $(top_builddir)/lib/util/libsudo_util.la
+---
+> # Libraries
+> LT_LIBS = $(top_builddir)/lib/util/libsudo_util.la
+> LIBS = $(LT_LIBS)
+135c136
+< 	$(LIBTOOL) $(LTFLAGS) --mode=link $(CC) -o $@ $(LIBEVENTLOG_OBJS)
+---
+> 	$(LIBTOOL) $(LTFLAGS) --mode=link $(CC) -o $@ $(LIBEVENTLOG_OBJS) $(LT_LIBS)
+diff -r sudo_vulnerable/lib/util/progname.c sudo_fixed/lib/util/progname.c
+41,42c41,42
+<     const char *base = strrchr(name, '/');
+<     __progname = base ? base : name;
+---
+>     const char *slash = strrchr(name, '/');
+>     __progname = slash ? slash + 1 : name;
+126,127c126,127
+<     const char *base = strrchr(name, '/');
+<     progname = base ? base : name;
+---
+>     const char *slash = strrchr(name, '/');
+>     progname = slash ? slash + 1 : name;
+diff -r sudo_vulnerable/NEWS sudo_fixed/NEWS
+0a1,28
+> What's new in Sudo 1.9.5p2
+> 
+>  * Fixed sudo's setprogname(3) emulation on systems that don't
+>    provide it.
+> 
+>  * Fixed a problem with the sudoers log server client where a partial
+>    write to the server could result the sudo process consuming large
+>    amounts of CPU time due to a cycle in the buffer queue. Bug #954.
+> 
+>  * Added a missing dependency on libsudo_util in libsudo_eventlog.
+>    Fixes a link error when building sudo statically.
+> 
+>  * The user's KRB5CCNAME environment variable is now preserved when
+>    performing PAM authentication.  This fixes GSSAPI authentication
+>    when the user has a non-default ccache.
+> 
+>  * When invoked as sudoedit, the same set of command line options
+>    are now accepted as for "sudo -e".  The -H and -P options are
+>    now rejected for sudoedit and "sudo -e" which matches the sudo
+>    1.7 behavior.  This is part of the fix for CVE-2021-3156.
+> 
+>  * Fixed a potential buffer overflow when unescaping backslashes
+>    in the command's arguments.  Normally, sudo escapes special
+>    characters when running a command via a shell (sudo -s or sudo
+>    -i).  However, it was also possible to run sudoedit with the -s
+>    or -i flags in which case no escaping had actually been done,
+>    making a buffer overflow possible.  This fixes CVE-2021-3156.
+> 
+diff -r sudo_vulnerable/plugins/sudoers/auth/pam.c sudo_fixed/plugins/sudoers/auth/pam.c
+117,120c117,120
+< 	 *  1 Last   successful login for %s: %s  
+< 	 *  2 Last   successful login for %s: %s on %s 
+< 	 *  3 Last unsuccessful login for %s: %s      
+< 	 *  4 Last unsuccessful login for %s: %s on %s 
+---
+> 	 *  1 Last   successful login for %s: %s
+> 	 *  2 Last   successful login for %s: %s on %s
+> 	 *  3 Last unsuccessful login for %s: %s
+> 	 *  4 Last unsuccessful login for %s: %s on %s
+290a291
+> 	const char *envccname;
+298a300,310
+> 	/* Set KRB5CCNAME from the user environment if not set to propagate this
+> 	 * information to PAM modules that may use it to authentication. */
+> 	envccname = sudo_getenv("KRB5CCNAME");
+> 	if (envccname == NULL && user_ccname != NULL) {
+> 		if (sudo_setenv("KRB5CCNAME", user_ccname, true) != 0) {
+> 			sudo_debug_printf(SUDO_DEBUG_WARN|SUDO_DEBUG_LINENO,
+> 			"unable to set KRB5CCNAME");
+> 			debug_return_int(AUTH_FAILURE);
+> 		}
+> 	}
+> 
+300a313,320
+> 
+> 	/* Restore KRB5CCNAME to its original value. */
+> 	if (envccname == NULL && sudo_unsetenv("KRB5CCNAME") != 0) {
+> 		sudo_debug_printf(SUDO_DEBUG_WARN|SUDO_DEBUG_LINENO,
+> 		"unable to restore KRB5CCNAME");
+> 		debug_return_int(AUTH_FAILURE);
+> 	}
+> 
+diff -r sudo_vulnerable/plugins/sudoers/log_client.c sudo_fixed/plugins/sudoers/log_client.c
+1703c1703,1704
+< 		    closure->write_instead_of_read = true;
+---
+> 		    /* Redirect write event to finish SSL_read() */
+> 		    closure->read_instead_of_write = true;
+1844a1846
+> 		    /* Redirect read event to finish SSL_write() */
+1891,1893d1892
+<     } else {
+< 	/* not done yet */
+< 	TAILQ_INSERT_HEAD(&closure->write_bufs, buf, entries);
+diff -r sudo_vulnerable/plugins/sudoers/policy.c sudo_fixed/plugins/sudoers/policy.c
+90a91
+>     const int edit_mask = MODE_EDIT|MODE_IGNORE_TICKET|MODE_NONINTERACTIVE;
+92d92
+<     char * const *cur;
+94a95
+>     char * const *cur;
+348a350,355
+>     }
+> 
+>     /* Sudo front-end should restrict mode flags for sudoedit. */
+>     if (ISSET(flags, MODE_EDIT) && (flags & edit_mask) != flags) {
+> 	sudo_warnx(U_("invalid mode flags from sudo front end: 0x%x"), flags);
+> 	goto bad;
+diff -r sudo_vulnerable/plugins/sudoers/sudoers.c sudo_fixed/plugins/sudoers/sudoers.c
+550c550
+<     if (sudo_mode & (MODE_RUN | MODE_EDIT) && prev_user != NULL) {
+---
+>     if (ISSET(sudo_mode, MODE_RUN|MODE_EDIT) && prev_user != NULL) {
+935,936c935,936
+<     if (sudo_mode & (MODE_RUN | MODE_EDIT | MODE_CHECK)) {
+< 	if (ISSET(sudo_mode, MODE_RUN | MODE_CHECK)) {
+---
+>     if (ISSET(sudo_mode, MODE_RUN|MODE_EDIT|MODE_CHECK)) {
+> 	if (!ISSET(sudo_mode, MODE_EDIT)) {
+964c964,965
+< 	    if (ISSET(sudo_mode, MODE_SHELL|MODE_LOGIN_SHELL)) {
+---
+> 	    if (ISSET(sudo_mode, MODE_SHELL|MODE_LOGIN_SHELL) &&
+> 		    ISSET(sudo_mode, MODE_RUN)) {
+972c973,974
+< 			if (from[0] == '\\' && !isspace((unsigned char)from[1]))
+---
+> 			if (from[0] == '\\' && from[1] != '\0' &&
+> 				!isspace((unsigned char)from[1])) {
+973a976,981
+> 			}
+> 			if (size - (to - user_args) < 1) {
+> 			    sudo_warnx(U_("internal error, %s overflow"),
+> 				__func__);
+> 			    debug_return_int(NOT_FOUND_ERROR);
+> 			}
+974a983,987
+> 		    }
+> 		    if (size - (to - user_args) < 1) {
+> 			sudo_warnx(U_("internal error, %s overflow"),
+> 			    __func__);
+> 			debug_return_int(NOT_FOUND_ERROR);
+diff -r sudo_vulnerable/plugins/sudoers/timestamp.c sudo_fixed/plugins/sudoers/timestamp.c
+646,647c646,647
+< 	    memset((char *)&entry + offsetof(struct timestamp_entry, type), 0,
+< 		nread - offsetof(struct timestamp_entry, type));
+---
+> 	    memset((char *)&entry + offsetof(struct timestamp_entry, flags), 0,
+> 		nread - offsetof(struct timestamp_entry, flags));
+diff -r sudo_vulnerable/src/parse_args.c sudo_fixed/src/parse_args.c
+120c120,123
+< #define DEFAULT_VALID_FLAGS	(MODE_BACKGROUND|MODE_PRESERVE_ENV|MODE_RESET_HOME|MODE_LOGIN_SHELL|MODE_NONINTERACTIVE|MODE_SHELL)
+---
+> #define DEFAULT_VALID_FLAGS	(MODE_BACKGROUND|MODE_PRESERVE_ENV|MODE_RESET_HOME|MODE_LOGIN_SHELL|MODE_NONINTERACTIVE|MODE_PRESERVE_GROUPS|MODE_SHELL)
+> #define EDIT_VALID_FLAGS	MODE_NONINTERACTIVE
+> #define LIST_VALID_FLAGS	(MODE_NONINTERACTIVE|MODE_LONG_LIST)
+> #define VALIDATE_VALID_FLAGS	MODE_NONINTERACTIVE
+264a268
+> 	valid_flags = EDIT_VALID_FLAGS;
+368c372
+< 		    valid_flags = MODE_NONINTERACTIVE;
+---
+> 		    valid_flags = EDIT_VALID_FLAGS;
+379a384
+> 		    SET(flags, MODE_RESET_HOME);
+434c439
+< 		    valid_flags = MODE_NONINTERACTIVE|MODE_LONG_LIST;
+---
+> 		    valid_flags = LIST_VALID_FLAGS;
+441a447
+> 		    SET(flags, MODE_PRESERVE_GROUPS);
+508c514
+< 		    valid_flags = MODE_NONINTERACTIVE;
+---
+> 		    valid_flags = VALIDATE_VALID_FLAGS;
+536c542
+< 	    if (argc == 0 && !(flags & (MODE_SHELL|MODE_LOGIN_SHELL))) {
+---
+> 	    if (argc == 0 && !ISSET(flags, MODE_SHELL|MODE_LOGIN_SHELL)) {
+604c610
+<     if (ISSET(mode, MODE_RUN) && ISSET(flags, MODE_SHELL)) {
+---
+>     if (ISSET(flags, MODE_SHELL|MODE_LOGIN_SHELL) && ISSET(mode, MODE_RUN)) {
+611,612c617
+< 	    size_t cmnd_size = (size_t) (argv[argc - 1] - argv[0]) +
+< 		strlen(argv[argc - 1]) + 1;
+---
+> 	    size_t size = 0;
+614,615c619,621
+< 	    cmnd = dst = reallocarray(NULL, cmnd_size, 2);
+< 	    if (cmnd == NULL)
+---
+> 	    for (av = argv; *av != NULL; av++)
+> 		size += strlen(*av) + 1;
+> 	    if (size == 0 || (cmnd = reallocarray(NULL, size, 2)) == NULL)
+620c626
+< 	    for (av = argv; *av != NULL; av++) {
+---
+> 	    for (dst = cmnd, av = argv; *av != NULL; av++) {
